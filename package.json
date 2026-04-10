@@ -1,0 +1,11 @@
+{
+  "name": "datco-dashboard",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo 'No build step required for static files'",
+    "start": "echo 'Vercel will handle serverless functions'"
+  },
+  "engines": {
+    "node": "20.x"
+  }
+}
