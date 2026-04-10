@@ -8,11 +8,8 @@ const chartColors = {
     text: '#8b949e'
 };
 
-async function fetchTicker(ticker) {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1y`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl);
-    const data = await res.json();
+// 將處理 Yahoo 資料的邏輯獨立出來
+function processYahooData(data) {
     const result = data.chart.result[0];
     const dict = {};
     result.timestamp.forEach((ts, i) => {
@@ -22,6 +19,29 @@ async function fetchTicker(ticker) {
         }
     });
     return dict;
+}
+
+// 雙重備援 Proxy 機制，完美解決 CORS 問題
+async function fetchTicker(ticker) {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1y`;
+    
+    // 首選 Proxy: corsproxy.io (通常最穩定)
+    const proxyUrl1 = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    
+    try {
+        const res = await fetch(proxyUrl1);
+        if (!res.ok) throw new Error('Primary proxy failed');
+        const data = await res.json();
+        return processYahooData(data);
+    } catch (err) {
+        console.log("Primary proxy failed, switching to fallback proxy...");
+        // 備用 Proxy: allorigins 的 /get 端點 (將資料包裝在 JSON 內部，絕對不會被 CORS 擋)
+        const proxyUrl2 = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+        const res2 = await fetch(proxyUrl2);
+        const data2 = await res2.json();
+        const parsedData = JSON.parse(data2.contents);
+        return processYahooData(parsedData);
+    }
 }
 
 function calcReturns(prices) {
@@ -50,7 +70,7 @@ async function initDashboard() {
         const btcDict = await fetchTicker('BTC-USD');
         
         const dates = Object.keys(mstrDict).sort();
-        const validDates = [];
+        const validDates =[];
         const ratioData =[];
         const mstrPrices = [];
         const btcPrices =[];
@@ -95,6 +115,7 @@ async function initDashboard() {
         renderSubChart(validDates, normMstr, normBtc);
     } catch (err) {
         console.error(err);
+        alert("資料載入失敗，可能是免費 API 代理伺服器暫時不穩，請稍後重新整理。");
     }
 }
 
@@ -114,61 +135,4 @@ function getChartOptions(title) {
     };
 }
 
-function renderMainChart(labels, ratio, sma) {
-    new Chart(document.getElementById('ratioChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets:[
-                {
-                    label: 'MSTR/BTC Ratio',
-                    data: ratio,
-                    borderColor: chartColors.ratio,
-                    backgroundColor: chartColors.ratioBg,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    fill: true,
-                    tension: 0.1
-                },
-                {
-                    label: '30-Day SMA',
-                    data: sma,
-                    borderColor: chartColors.sma,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    borderDash: [5, 5],
-                    fill: false
-                }
-            ]
-        },
-        options: getChartOptions('MSTR/BTC Relative Premium Proxy & 30D SMA')
-    });
-}
-
-function renderSubChart(labels, mstr, btc) {
-    new Chart(document.getElementById('perfChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets:[
-                {
-                    label: 'MSTR Normalized Perf (Base 100)',
-                    data: mstr,
-                    borderColor: chartColors.mstr,
-                    borderWidth: 2,
-                    pointRadius: 0
-                },
-                {
-                    label: 'BTC Normalized Perf (Base 100)',
-                    data: btc,
-                    borderColor: chartColors.btc,
-                    borderWidth: 2,
-                    pointRadius: 0
-                }
-            ]
-        },
-        options: getChartOptions('1-Year Normalized Performance Comparison')
-    });
-}
-
-window.onload = initDashboard;
+function rend
