@@ -8,7 +8,8 @@ const chartColors = {
     text: '#8b949e'
 };
 
-// 將處理 Yahoo 資料的邏輯獨立出來
+let latestDataPayload = "";
+
 function processYahooData(data) {
     const result = data.chart.result[0];
     const dict = {};
@@ -21,11 +22,8 @@ function processYahooData(data) {
     return dict;
 }
 
-// 雙重備援 Proxy 機制，完美解決 CORS 問題
 async function fetchTicker(ticker) {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1y`;
-    
-    // 首選 Proxy: corsproxy.io (通常最穩定)
     const proxyUrl1 = `https://corsproxy.io/?${encodeURIComponent(url)}`;
     
     try {
@@ -34,8 +32,6 @@ async function fetchTicker(ticker) {
         const data = await res.json();
         return processYahooData(data);
     } catch (err) {
-        console.log("Primary proxy failed, switching to fallback proxy...");
-        // 備用 Proxy: allorigins 的 /get 端點 (將資料包裝在 JSON 內部，絕對不會被 CORS 擋)
         const proxyUrl2 = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
         const res2 = await fetch(proxyUrl2);
         const data2 = await res2.json();
@@ -72,17 +68,22 @@ async function initDashboard() {
         const dates = Object.keys(mstrDict).sort();
         const validDates =[];
         const ratioData =[];
-        const mstrPrices = [];
+        const mstrPrices =[];
         const btcPrices =[];
+        const historyForAI =[];
 
         dates.forEach(d => {
             if (btcDict[d]) {
+                const ratio = mstrDict[d] / btcDict[d];
                 validDates.push(d);
-                ratioData.push(mstrDict[d] / btcDict[d]);
+                ratioData.push(ratio);
                 mstrPrices.push(mstrDict[d]);
                 btcPrices.push(btcDict[d]);
+                historyForAI.push(`${d}: ${ratio.toFixed(6)}`);
             }
         });
+
+        latestDataPayload = historyForAI.slice(-7).join('\n');
 
         const sma30 =[];
         for (let i = 0; i < ratioData.length; i++) {
@@ -113,9 +114,45 @@ async function initDashboard() {
 
         renderMainChart(validDates, ratioData, sma30);
         renderSubChart(validDates, normMstr, normBtc);
+
+        const btn = document.getElementById('btn-analyze');
+        btn.disabled = false;
+        btn.innerText = "Request AI Analysis";
+        
+        requestAISummary();
+
     } catch (err) {
-        console.error(err);
-        alert("資料載入失敗，可能是免費 API 代理伺服器暫時不穩，請稍後重新整理。");
+        document.getElementById('ai-content').innerText = "Failed to load data for analysis.";
+    }
+}
+
+async function requestAISummary() {
+    const btn = document.getElementById('btn-analyze');
+    const content = document.getElementById('ai-content');
+    
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+    content.innerHTML = "<i>Analyzing market structure via Gemini AI...</i>";
+
+    try {
+        const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: latestDataPayload })
+        });
+
+        if (!res.ok) throw new Error("API request failed");
+        
+        const data = await res.json();
+        
+        if (data.error) throw new Error(data.error);
+
+        content.innerHTML = data.summary.replace(/\n/g, '<br>');
+        btn.innerText = "Analysis Complete";
+    } catch (err) {
+        content.innerHTML = `<span class="text-red">AI Analysis Error: Ensure GEMINI_API_KEY is set in Vercel.</span>`;
+        btn.innerText = "Retry Analysis";
+        btn.disabled = false;
     }
 }
 
