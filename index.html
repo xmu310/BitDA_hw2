@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAT.co Quantitative Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <header>
+            <h1>DAT.co Quantitative Analytics Dashboard</h1>
+            <p>MicroStrategy (MSTR) vs Bitcoin (BTC) Empirical Premium & Correlation Analysis</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Latest MSTR/BTC Ratio</h3>
+                <div class="value" id="val-latest-ratio">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>30-Day High (Premium)</h3>
+                <div class="value text-green" id="val-30d-high">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>30-Day Low (Discount)</h3>
+                <div class="value text-red" id="val-30d-low">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>30-Day Rolling Correlation</h3>
+                <div class="value" id="val-correlation">--</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-box main-chart">
+                <canvas id="ratioChart"></canvas>
+            </div>
+            <div class="chart-box sub-chart">
+                <canvas id="perfChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
