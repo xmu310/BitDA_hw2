@@ -135,4 +135,61 @@ function getChartOptions(title) {
     };
 }
 
-function rend
+function renderMainChart(labels, ratio, sma) {
+    new Chart(document.getElementById('ratioChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets:[
+                {
+                    label: 'MSTR/BTC Ratio',
+                    data: ratio,
+                    borderColor: chartColors.ratio,
+                    backgroundColor: chartColors.ratioBg,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.1
+                },
+                {
+                    label: '30-Day SMA',
+                    data: sma,
+                    borderColor: chartColors.sma,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    borderDash: [5, 5],
+                    fill: false
+                }
+            ]
+        },
+        options: getChartOptions('MSTR/BTC Relative Premium Proxy & 30D SMA')
+    });
+}
+
+function renderSubChart(labels, mstr, btc) {
+    new Chart(document.getElementById('perfChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets:[
+                {
+                    label: 'MSTR Normalized Perf (Base 100)',
+                    data: mstr,
+                    borderColor: chartColors.mstr,
+                    borderWidth: 2,
+                    pointRadius: 0
+                },
+                {
+                    label: 'BTC Normalized Perf (Base 100)',
+                    data: btc,
+                    borderColor: chartColors.btc,
+                    borderWidth: 2,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: getChartOptions('1-Year Normalized Performance Comparison')
+    });
+}
+
+window.onload = initDashboard;
